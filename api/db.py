@@ -101,8 +101,8 @@ def insert_fitting_record(
         try:
             # 1) 사용자 검증
             cur.execute(
-                "SELECT id, coin_balance, active FROM app_users WHERE id = :uid",
-                uid=user_id,
+                "SELECT id, coin_balance, active FROM app_users WHERE id = :user_id",
+                {"user_id": user_id},
             )
             row = cur.fetchone()
             if row is None:
@@ -115,15 +115,15 @@ def insert_fitting_record(
 
             # 2) 상품 검증
             cur.execute(
-                "SELECT id, active FROM products WHERE id = :pid",
-                pid=product_id,
+                "SELECT id, active FROM products WHERE id = :product_id",
+                {"product_id": product_id},
             )
             prod = cur.fetchone()
             if prod is None or int(prod[1] or 0) != 1:
                 raise ValueError(f"product_id={product_id} (활성 상품) 을 찾을 수 없습니다.")
 
             # 3) INSERT … RETURNING id
-            record_id_var = cur.var(oracledb.NUMBER)
+            record_id_var = cur.var(oracledb.DB_TYPE_NUMBER)
             cur.execute(
                 """
                 INSERT INTO fitting_records (
@@ -133,11 +133,13 @@ def insert_fitting_record(
                 )
                 RETURNING id INTO :record_id
                 """,
-                user_id=user_id,
-                product_id=product_id,
-                result_image_path=result_image_path,
-                coin_used=coin_used,
-                record_id=record_id_var,
+                {
+                    "user_id": user_id,
+                    "product_id": product_id,
+                    "result_image_path": result_image_path,
+                    "coin_used": coin_used,
+                    "record_id": record_id_var,
+                },
             )
             new_id = int(record_id_var.getvalue()[0])
 
@@ -145,12 +147,11 @@ def insert_fitting_record(
             cur.execute(
                 """
                 UPDATE app_users
-                SET coin_balance = coin_balance - :c,
+                SET coin_balance = coin_balance - :coin_delta,
                     fitting_count = fitting_count + 1
-                WHERE id = :uid
+                WHERE id = :user_id
                 """,
-                c=coin_used,
-                uid=user_id,
+                {"coin_delta": coin_used, "user_id": user_id},
             )
 
             conn.commit()

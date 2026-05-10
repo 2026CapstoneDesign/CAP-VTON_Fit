@@ -63,6 +63,12 @@ class RiskLevel(str, Enum):
     RISK = "risk"        # 확실한 핏 문제
 
 
+class FitPreference(str, Enum):
+    SLIM = "slim"
+    REGULAR = "regular"
+    RELAXED = "relaxed"
+
+
 # ──────────────────────────────────────────────
 # Body Part Keys (부위 식별)
 # ──────────────────────────────────────────────
@@ -309,6 +315,16 @@ class PartFitResult:
     confidence: float       # 0~1 (추정치수이면 낮아짐)
     ease_raw: float         # 원시 ease 비율
 
+    @property
+    def label(self) -> str:
+        return {
+            FitClass.TOO_TIGHT: "very_tight",
+            FitClass.TIGHT:     "tight",
+            FitClass.REGULAR:   "regular",
+            FitClass.LOOSE:     "loose",
+            FitClass.TOO_LOOSE: "oversized",
+        }.get(self.fit_class, "regular")
+
 
 @dataclass
 class FitReport:
@@ -334,6 +350,26 @@ class FitReport:
         t = [self.parts[p].tightness if p in self.parts else 0.0 for p in parts_ordered]
         c = [self.parts[p].confidence if p in self.parts else 0.5 for p in parts_ordered]
         return np.array(t + c + [self.overall_score], dtype=np.float32)
+
+    def to_dict(self) -> dict:
+        return {
+            "overall_score": self.overall_score,
+            "size_recommendation": self.size_recommendation,
+            "parts": {
+                k: {
+                    "tightness": v.tightness,
+                    "fit_class": v.fit_class.value,
+                    "label": v.label,
+                    "risk_level": v.risk_level.value,
+                    "confidence": v.confidence,
+                    "ease_raw": v.ease_raw,
+                }
+                for k, v in self.parts.items()
+            },
+            "risk_parts": self.risk_parts,
+            "all_sizes_scores": self.all_sizes_scores,
+            "notes": self.notes,
+        }
 
 
 # ──────────────────────────────────────────────

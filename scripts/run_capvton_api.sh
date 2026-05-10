@@ -13,14 +13,15 @@ export CAPVTON_CKPT_DIR="${CAPVTON_CKPT_DIR:-$(pwd)/ckpts}"
 
 # admin-web과 동일한 정적 디렉터리에 결과 이미지를 저장하면
 # /uploads/fitting-results/<file>.jpg 가 그대로 서빙됨.
-export CAPVTON_UPLOADS_DIR="${CAPVTON_UPLOADS_DIR:-/mnt/d/fit_light/admin-web/uploads/fitting-results}"
+_ADMIN_WEB="${_ADMIN_WEB:-/mnt/c/capstorn/Admin_Web}"
+export CAPVTON_UPLOADS_DIR="${CAPVTON_UPLOADS_DIR:-$_ADMIN_WEB/uploads/fitting-results}"
 export CAPVTON_PUBLIC_URL_PREFIX="${CAPVTON_PUBLIC_URL_PREFIX:-/uploads/fitting-results}"
 
 # Oracle Wallet 위치 (admin-web 와 공유)
 export ORACLE_DB_USER="${ORACLE_DB_USER:-ADMIN}"
 export ORACLE_DB_PASSWORD="${ORACLE_DB_PASSWORD:-Fitmate1234!}"
 export ORACLE_DB_CONNECT_STRING="${ORACLE_DB_CONNECT_STRING:-fitlight_low}"
-export ORACLE_DB_CONFIG_DIR="${ORACLE_DB_CONFIG_DIR:-/mnt/d/fit_light/admin-web/Wallet_fitlight}"
+export ORACLE_DB_CONFIG_DIR="${ORACLE_DB_CONFIG_DIR:-$_ADMIN_WEB/Wallet_fitlight}"
 export ORACLE_DB_WALLET_LOCATION="${ORACLE_DB_WALLET_LOCATION:-$ORACLE_DB_CONFIG_DIR}"
 export ORACLE_DB_WALLET_PASSWORD="${ORACLE_DB_WALLET_PASSWORD:-Fitmate1234!}"
 
