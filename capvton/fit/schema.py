@@ -78,10 +78,14 @@ BODY_PARTS = [
     "sleeve_length", "length", "thigh", "inseam",
 ]
 
-# 카테고리별 관련 부위
+# 카테고리(super_category)별 핏 평가 부위
+# - EaseVector.compute 가 값을 계산한 부위만 실제로 평가됨 (None이면 자동 스킵)
 CATEGORY_RELEVANT_PARTS: Dict[str, List[str]] = {
-    "upper_body": ["chest", "waist", "shoulder", "sleeve_length", "length"],
-    "lower_body": ["waist", "hip", "thigh", "length", "inseam"],
+    # 상의/아우터: 가슴·어깨·소매 필수, 허리·기장 선택
+    "upper_body": ["chest", "shoulder", "sleeve_length", "waist", "length"],
+    # 하의: 허리·엉덩이·기장 필수, 인심·허벅지 선택
+    "lower_body": ["waist", "hip", "length", "inseam", "thigh"],
+    # 원피스: 상·하의 통합
     "dresses": ["chest", "waist", "hip", "shoulder", "sleeve_length", "length"],
 }
 
@@ -172,6 +176,21 @@ class UserMeasurements:
             dtype=np.float32,
         )
 
+    def to_dict(self) -> dict:
+        return {
+            "gender": self.gender.value,
+            "height_cm": self.height,
+            "chest_circumference_cm": self.chest,
+            "waist_circumference_cm": self.waist,
+            "hip_circumference_cm": self.hip,
+            "shoulder_width_cm": self.shoulder_width,
+            "arm_length_cm": self.arm_length,
+            "inseam_cm": self.inseam,
+            "thigh_circumference_cm": self.thigh,
+            "weight_kg": self.weight,
+            "estimated_fields": self.estimated_fields,
+        }
+
 
 @dataclass
 class GarmentMeasurements:
@@ -179,8 +198,8 @@ class GarmentMeasurements:
     category: GarmentCategory
     super_category: GarmentSuperCategory
 
-    # 공통 필수
-    length: float  # cm (총기장)
+    # 기장 (상의는 없을 수 있으므로 Optional)
+    length: Optional[float] = None  # cm (총기장)
 
     # 상의 필수
     chest_width: Optional[float] = None     # cm (단면, ×2=둘레)
@@ -201,6 +220,22 @@ class GarmentMeasurements:
 
     # 사이즈별 스펙이 여러 개일 때 사용
     size_label: Optional[str] = None  # "S", "M", "L", ...
+
+    def to_dict(self) -> dict:
+        return {
+            "category": self.category.value,
+            "super_category": self.super_category.value,
+            "size_label": self.size_label,
+            "length_cm": self.length,
+            "chest_width_cm": self.chest_width,
+            "shoulder_cm": self.shoulder,
+            "sleeve_length_cm": self.sleeve_length,
+            "waist_width_cm": self.waist_width,
+            "hip_width_cm": self.hip_width,
+            "hem_width_cm": self.hem_width,
+            "thigh_width_cm": self.thigh_width,
+            "inseam_cm": self.inseam,
+        }
 
     def to_circumference(self, field_name: str) -> Optional[float]:
         """단면 → 둘레 변환 (필요한 필드에 ×2)."""
@@ -271,10 +306,11 @@ class EaseVector:
             if ref_sleeve > 0:
                 ease["sleeve_length"] = _raw_ease(garment.sleeve_length, ref_sleeve)
 
-        # 총기장 (카테고리별 기준 대비)
-        ref_length = _reference_length(user, garment.super_category)
-        if ref_length > 0:
-            ease["length"] = _raw_ease(garment.length, ref_length)
+        # 총기장 (없으면 건너뜀 — 상의는 기장 미입력 가능)
+        if garment.length is not None:
+            ref_length = _reference_length(user, garment.super_category)
+            if ref_length > 0:
+                ease["length"] = _raw_ease(garment.length, ref_length)
 
         # 허벅지
         if garment.thigh_width is not None and user.thigh is not None:
@@ -353,21 +389,21 @@ class FitReport:
 
     def to_dict(self) -> dict:
         return {
-            "overall_score": self.overall_score,
-            "size_recommendation": self.size_recommendation,
+            "overallScore": self.overall_score,
+            "sizeRecommendation": self.size_recommendation,
             "parts": {
                 k: {
                     "tightness": v.tightness,
-                    "fit_class": v.fit_class.value,
+                    "fitClass": v.fit_class.value,
                     "label": v.label,
-                    "risk_level": v.risk_level.value,
+                    "riskLevel": v.risk_level.value,
                     "confidence": v.confidence,
-                    "ease_raw": v.ease_raw,
+                    "easeRaw": v.ease_raw,
                 }
                 for k, v in self.parts.items()
             },
-            "risk_parts": self.risk_parts,
-            "all_sizes_scores": self.all_sizes_scores,
+            "riskParts": self.risk_parts,
+            "allSizesScores": self.all_sizes_scores,
             "notes": self.notes,
         }
 

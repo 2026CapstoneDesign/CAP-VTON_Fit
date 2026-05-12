@@ -115,7 +115,7 @@ def coerce_garment_measurements(obj: Any, default_category: str = "upper_body") 
         return GarmentMeasurements(
             category=category,
             super_category=super_category,
-            length=float(obj.get("garment_length_cm", obj.get("length", 65))),
+            length=(_opt_float(obj, "garment_length_cm", "length")),
             chest_width=_circ_to_half(obj, "chest_circumference_cm", "chest_width"),
             shoulder=_opt_float(obj, "shoulder_width_cm", "shoulder"),
             sleeve_length=_opt_float(obj, "sleeve_length_cm", "sleeve_length"),

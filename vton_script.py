@@ -1,6 +1,9 @@
 import gc
+import logging
 import os
 from typing import Any, Optional
+
+log = logging.getLogger("capvton.model")
 
 import cv2
 import numpy as np
@@ -1170,6 +1173,10 @@ class CAPVirtualTryOn:
                     refined_mask, fit_outputs.get("fit_report"),
                 )
             except Exception as exc:
+                log.exception(
+                    "[capvton] ❌ 핏 추론 실패 (fit_strategy=%s) — 피팅 이미지는 생성되지만 fitReport는 null로 반환됩니다.",
+                    fit_strategy,
+                )
                 fit_outputs = {
                     "fit_report": None,
                     "refined_mask": mask,

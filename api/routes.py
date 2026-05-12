@@ -107,6 +107,29 @@ async def tryon(
     user_meas_dict = _parse_optional_json(user_measurements, "user_measurements")
     garment_meas_dict = _parse_optional_json(garment_measurements, "garment_measurements")
 
+    # ── 치수 수신 현황 로깅 ──────────────────────────────────────────────
+    if user_meas_dict:
+        log.info("[/tryon] ✅ 사용자 신체 치수 수신: %s", list(user_meas_dict.keys()))
+    else:
+        log.warning(
+            "[/tryon] ❌ 사용자 신체 치수 누락 — raw=%s (클라이언트가 user_measurements를 전송하지 않음)",
+            repr(user_measurements)[:120],
+        )
+
+    if garment_meas_dict:
+        log.info("[/tryon] ✅ 의류 치수 수신: %s", list(garment_meas_dict.keys()))
+    else:
+        log.warning(
+            "[/tryon] ❌ 의류 치수 누락 — raw=%s (클라이언트가 garment_measurements를 전송하지 않음)",
+            repr(garment_measurements)[:120],
+        )
+
+    if not user_meas_dict and not garment_meas_dict:
+        log.warning("[/tryon] ⚠️ 신체·의류 치수 모두 누락 → 핏 추론 건너뜀")
+    elif not user_meas_dict or not garment_meas_dict:
+        missing = "신체 치수" if not user_meas_dict else "의류 치수"
+        log.warning("[/tryon] ⚠️ %s 누락 → 핏 추론 건너뜀 (둘 다 있어야 핏 추론 실행됨)", missing)
+
     vton = get_vton()
     if vton is None:
         raise HTTPException(status_code=503, detail="모델이 로드되지 않았습니다 (DISABLE_MODEL).")
@@ -172,12 +195,27 @@ async def tryon(
             raise HTTPException(status_code=500, detail=f"DB 저장 실패: {exc}") from exc
 
     if response_format == "json":
+        fit_report_data = None
+        if isinstance(result, dict) and result.get("fit_report") is not None:
+            try:
+                fit_report_data = result["fit_report"].to_dict()
+                log.info(
+                    "[/tryon] fitReport 생성 완료 — 종합점수=%.0f%% 사이즈추천=%s 부위=%s",
+                    fit_report_data.get("overallScore", 0) * 100,
+                    fit_report_data.get("sizeRecommendation", "-"),
+                    list(fit_report_data.get("parts", {}).keys()),
+                )
+            except Exception as exc:
+                log.warning("[/tryon] fitReport 직렬화 실패: %s", exc)
+        else:
+            log.info("[/tryon] fitReport 없음 (신체·의류 치수 미전송 또는 fit 추론 미실행)")
         body = {
             "imageBase64": base64.b64encode(image_to_jpeg_bytes(gen_image)).decode("ascii"),
             "recordId": record_id,
-            "resultImagePath": public_url,
+            "resultPath": public_url,
             "coinBalance": coin_balance_after,
             "coinUsed": coin_used_value if persist_to_db else 0,
+            "fitReport": fit_report_data,
         }
         return JSONResponse(body)
 

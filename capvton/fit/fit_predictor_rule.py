@@ -195,7 +195,7 @@ class RuleBasedFitPredictor:
         size_label = garment.size_label or "?"
         return FitReport(
             overall_score=overall,
-            size_recommendation=f"{size_label}",
+            size_recommendation=f"현재 사이즈: {size_label}",
             parts=parts,
             risk_parts=risk_parts,
             notes=notes,
